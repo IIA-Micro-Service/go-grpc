@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+//package passport;
+//option go_package = "proto;passport";
+option go_package = ".;passport";
+
+message LoginRequest {
+  string name = 1;
+}
+message LoginReply {
+  string message = 1;
+}
+service Passport {
+  rpc Login(LoginRequest) returns (LoginReply) {}
+}
