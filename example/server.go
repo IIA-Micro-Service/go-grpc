@@ -5,6 +5,7 @@ import (
 	"github.com/iia-micro-service/go-grpc/config"
 	"github.com/iia-micro-service/go-grpc/core"
 	pb "github.com/iia-micro-service/go-grpc/example/passport"
+	"google.golang.org/grpc"
 	"log"
 )
 
@@ -16,15 +17,21 @@ func (s *PassportService) Login(ctx context.Context, r *pb.LoginRequest) (*pb.Lo
 
 func main() {
 	// 初始化配置
-	trpcConfig := config.Config{}
-	trpcConfig.Ip = "0.0.0.0"
-	trpcConfig.GrpcPort = "9999"
+	config := config.Config{}
+	config.Ip = "0.0.0.0"
+	config.GrpcPort = "9998"
+	config.HttpPort = "9999"
 
 	// New方法获取一个svr实例
-	svr := core.New(&trpcConfig)
+	svr := core.New(&config)
 
 	// 注入pb服务
 	pb.RegisterPassportServer(svr.GetGrpcServer().GetRawGrpcServer(), &PassportService{})
+	pb.RegisterPassportHandlerFromEndpoint(
+		context.Background(),
+		svr.GetHttpServer().GetGatewayMux(),
+		config.Ip+":"+config.GrpcPort,
+		[]grpc.DialOption{grpc.WithInsecure()})
 
 	// 执行svr实例的Run()方法，Run()方法中用新的协程去运行go grpc标准库服务
 	err := svr.Run()

@@ -2,7 +2,9 @@ syntax = "proto3";
 
 //package passport;
 //option go_package = "proto;passport";
-option go_package = ".;passport";
+option go_package = "./;passport";
+
+import "google/api/annotations.proto";
 
 message LoginRequest {
   string name = 1;
@@ -11,5 +13,9 @@ message LoginReply {
   string message = 1;
 }
 service Passport {
-  rpc Login(LoginRequest) returns (LoginReply) {}
+  rpc Login(LoginRequest) returns (LoginReply) {
+    option (google.api.http) = {
+      post: "/passport/login"
+    };
+  }
 }

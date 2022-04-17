@@ -9,7 +9,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	clientConn, _ := GetClientConn(ctx, "localhost:9999", nil)
+	clientConn, _ := GetClientConn(ctx, "localhost:9998", nil)
 	defer clientConn.Close()
 
 	passportServiceClient := pb.NewPassportClient(clientConn)

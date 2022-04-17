@@ -5,9 +5,6 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 /*
@@ -41,13 +38,13 @@ func (grpcServer *grpcServer) Run(config *config.Config) error {
 	}
 	grpcServer.listenSocket = listenSocket
 	go grpcServer.serv()
-	log.Printf("tRPC - Run gRPC on %s\n", listenSocketAddr)
+	log.Printf("tRPC - Run gRPC server on %s\n", listenSocketAddr)
 	return nil
 }
 func (grpcServer *grpcServer) serv() {
 	err := grpcServer.server.Serve(grpcServer.listenSocket)
 	if err != nil {
-		log.Fatalf("tRPC - gRPC serv err: %v", err)
+		log.Fatalf("tRPC - gRPC server err: %v", err)
 	}
 }
 
@@ -55,14 +52,10 @@ func (grpcServer *grpcServer) serv() {
  * @desc : grpcServer实现在后台阻塞等待结束服务信号
  */
 func (grpcServer *grpcServer) Stop() {
-	waitSignal := make(chan os.Signal, 1)
-	signal.Notify(waitSignal, syscall.SIGINT, syscall.SIGTERM)
-	<-waitSignal
-	log.Println("tRPC - Stop gRPC...")
+	log.Println("tRPC - Stop gRPC server on ", grpcServer.listenSocket.Addr())
 	grpcServer.server.GracefulStop()
 	log.Println("tRPC - Close listen socket...")
 	grpcServer.listenSocket.Close()
-	log.Println("tRPC - END")
 }
 func (grpcServer *grpcServer) RegisterService() {
 

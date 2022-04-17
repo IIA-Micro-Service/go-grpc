@@ -6,6 +6,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 /*
@@ -14,6 +17,7 @@ import (
 type Core struct {
 	trpcConfig       *config.Config
 	grpcServer       *grpcServer
+	httpServer       *httpServer
 	grpcOptions      []grpc.ServerOption
 	reflectionStatus bool
 	shutDownHook     func()
@@ -51,15 +55,21 @@ func (core *Core) SetStreamInterceptors(interceptors []grpc.StreamServerIntercep
 func (core *Core) GetGrpcServer() *grpcServer {
 	return core.grpcServer
 }
+func (core *Core) GetHttpServer() *httpServer {
+	return core.httpServer
+}
 
 /*
  * @desc : core.grpcServer.Run()方法中开启了一个新的协程，运行gRPC服务
  */
 func (core *Core) Run() error {
+	// 让gRPC服务跑起来.
 	err := core.grpcServer.Run(core.trpcConfig)
 	if err != nil {
 		log.Fatalf("tRPC - err on core.Run:%v", err)
 	}
+	// 让http服务跑起来
+	core.httpServer.Run()
 	return err
 }
 
@@ -67,9 +77,14 @@ func (core *Core) Run() error {
  * @desc : 主协程在阻塞等待保证不退出，等待系统信号来终止服务
  */
 func (core *Core) WaitTermination(stopHook func()) {
+	waitSignal := make(chan os.Signal, 1)
+	signal.Notify(waitSignal, syscall.SIGINT, syscall.SIGTERM)
+	<-waitSignal
 	// 结束grpc服务
 	core.grpcServer.Stop()
 	// 结束http服务
+	core.httpServer.Stop()
+	log.Println("tRPC - END")
 	if stopHook != nil {
 		stopHook()
 	}
@@ -78,7 +93,7 @@ func (core *Core) WaitTermination(stopHook func()) {
 /*
  * @desc : 返回一个trpc结构体指针
  */
-func New(trpcConfig *config.Config) *Core {
+func New(config *config.Config) *Core {
 	core := Core{}
 
 	// 设置grpc服务的配置项
@@ -88,11 +103,14 @@ func New(trpcConfig *config.Config) *Core {
 	// 初始化一个grpc服务
 	grpcSvr := NewGrpc(core.grpcOptions)
 	if core.reflectionStatus {
-		reflection.Register(grpcSvr.server)
+		reflection.Register(grpcSvr.GetRawGrpcServer())
 	}
 	// 初始化一个http服务，通过gateway方式同时实现http服务
+	httpSvr := NewHttp(config, grpcSvr.GetRawGrpcServer())
 
-	core.trpcConfig = trpcConfig
+	// 给core结构体赋值
+	core.trpcConfig = config
+	core.httpServer = httpSvr
 	core.grpcServer = grpcSvr
 	return &core
 }
