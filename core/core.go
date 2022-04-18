@@ -15,7 +15,7 @@ import (
  * @desc : trpc核心struct结构体
  */
 type Core struct {
-	trpcConfig       *config.Config
+	config           *config.Config
 	grpcServer       *grpcServer
 	httpServer       *httpServer
 	grpcOptions      []grpc.ServerOption
@@ -63,10 +63,13 @@ func (core *Core) GetHttpServer() *httpServer {
  * @desc : core.grpcServer.Run()方法中开启了一个新的协程，运行gRPC服务
  */
 func (core *Core) Run() error {
+	var err error
 	// 让gRPC服务跑起来.
-	err := core.grpcServer.Run(core.trpcConfig)
-	if err != nil {
-		log.Fatalf("tRPC - err on core.Run:%v", err)
+	if false == core.config.PortReuse {
+		err = core.grpcServer.Run(core.config)
+		if err != nil {
+			log.Fatalf("tRPC - err on core.Run:%v", err)
+		}
 	}
 	// 让http服务跑起来
 	core.httpServer.Run()
@@ -80,10 +83,18 @@ func (core *Core) WaitTermination(stopHook func()) {
 	waitSignal := make(chan os.Signal, 1)
 	signal.Notify(waitSignal, syscall.SIGINT, syscall.SIGTERM)
 	<-waitSignal
-	// 结束grpc服务
-	core.grpcServer.Stop()
-	// 结束http服务
-	core.httpServer.Stop()
+	// 如果开启了http服务
+	if true == core.config.RunHTTP {
+		// 结束http服务
+		core.httpServer.Stop()
+		if false == core.config.PortReuse {
+			// 结束grpc服务
+			core.grpcServer.Stop()
+		}
+	} else {
+		// 结束grpc服务
+		core.grpcServer.Stop()
+	}
 	log.Println("tRPC - END")
 	if stopHook != nil {
 		stopHook()
@@ -106,11 +117,13 @@ func New(config *config.Config) *Core {
 		reflection.Register(grpcSvr.GetRawGrpcServer())
 	}
 	// 初始化一个http服务，通过gateway方式同时实现http服务
-	httpSvr := NewHttp(config, grpcSvr.GetRawGrpcServer())
+	if true == config.RunHTTP {
+		httpSvr := NewHttp(config, grpcSvr.GetRawGrpcServer())
+		core.httpServer = httpSvr
+	}
 
 	// 给core结构体赋值
-	core.trpcConfig = config
-	core.httpServer = httpSvr
+	core.config = config
 	core.grpcServer = grpcSvr
 	return &core
 }

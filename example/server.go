@@ -21,6 +21,8 @@ func main() {
 	config.Ip = "0.0.0.0"
 	config.GrpcPort = "9998"
 	config.HttpPort = "9999"
+	config.RunHTTP = true
+	config.PortReuse = true
 
 	// New方法获取一个svr实例
 	svr := core.New(&config)

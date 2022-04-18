@@ -2,11 +2,15 @@ package core
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/iia-micro-service/go-grpc/config"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type HttpServer interface {
@@ -44,31 +48,41 @@ func (hSvr *httpServer) Stop() {
 }
 
 func NewHttp(config *config.Config, grpc *grpc.Server) *httpServer {
+	var rawHttpServer *http.Server
+	var gatewayMux *runtime.ServeMux
 	httpServer := &httpServer{}
-	Addr := config.Ip + ":" + config.HttpPort
-	//httpMux    := http.NewServeMux()
-	gatewayMux := NewGateway()
-	//httpMux.Handle("/", gatewayMux)
-	rawHttpServer := &http.Server{
-		//TLSConfig: getTLSConfig(),
-		TLSConfig: &tls.Config{InsecureSkipVerify: true},
-		Addr:      Addr,
-		Handler:   gatewayMux,
-		/*
+
+	// 如果开启了端口复用
+	if true == config.PortReuse {
+		Addr := config.Ip + ":" + config.GrpcPort
+		gatewayMux = NewGateway()
+		rawHttpServer = &http.Server{
+			//TLSConfig: getTLSConfig(),
+			TLSConfig: &tls.Config{InsecureSkipVerify: true},
+			Addr:      Addr,
 			Handler: h2c.NewHandler(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if r.ProtoMajor == 2 &&
-						strings.Contains(r.Header.Get(`Content-Type`), `application/grpc`) {
+					if r.ProtoMajor == 2 && strings.Contains(r.Header.Get(`Content-Type`), `application/grpc`) {
 						fmt.Println("gRPC request")
 						grpc.ServeHTTP(w, r)
 					} else {
 						fmt.Println("Http request")
-						httpMux.ServeHTTP(w, r)
+						gatewayMux.ServeHTTP(w, r)
 					}
 				}),
 				&http2.Server{}),
-		*/
+		}
+	} else {
+		Addr := config.Ip + ":" + config.HttpPort
+		gatewayMux = NewGateway()
+		rawHttpServer = &http.Server{
+			//TLSConfig: getTLSConfig(),
+			TLSConfig: &tls.Config{InsecureSkipVerify: true},
+			Addr:      Addr,
+			Handler:   gatewayMux,
+		}
 	}
+
 	httpServer.gatewayMux = gatewayMux
 	httpServer.httpServer = rawHttpServer
 	return httpServer
