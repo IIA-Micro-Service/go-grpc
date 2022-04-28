@@ -19,7 +19,8 @@ func requestErrorHandler(p interface{}) (err error) {
  */
 func GetServerUnrayInterceptors() []grpc.UnaryServerInterceptor {
 	return []grpc.UnaryServerInterceptor{
-		unary.Request(),
+		unary.RequestAudit(),
+		unary.RequestCancel(),
 		grpcRecovery.UnaryServerInterceptor(grpcRecovery.WithRecoveryHandler(requestErrorHandler)),
 	}
 }

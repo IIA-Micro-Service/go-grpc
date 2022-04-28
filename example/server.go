@@ -22,7 +22,7 @@ func main() {
 	svrConfig.GrpcPort = "9998"
 	svrConfig.HttpPort = "9999"
 	svrConfig.RunHTTP = true
-	svrConfig.PortReuse = true
+	svrConfig.PortReuse = false
 
 	// New方法获取一个svr实例
 	svr := core.New(&svrConfig)
