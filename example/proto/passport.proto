@@ -13,7 +13,7 @@ message LoginReply {
   string message = 1;
 }
 service Passport {
-  rpc Login(LoginRequest) returns (LoginReply) {
+  rpc Login(stream LoginRequest) returns (stream LoginReply) {
     option (google.api.http) = {
       post: "/passport/login"
     };

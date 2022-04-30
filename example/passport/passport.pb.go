@@ -135,13 +135,13 @@ var file_proto_passport_proto_rawDesc = []byte{
 	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x26, 0x0a, 0x0a, 0x4c, 0x6f, 0x67, 0x69,
 	0x6e, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
 	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
-	0x32, 0x48, 0x0a, 0x08, 0x50, 0x61, 0x73, 0x73, 0x70, 0x6f, 0x72, 0x74, 0x12, 0x3c, 0x0a, 0x05,
+	0x32, 0x4c, 0x0a, 0x08, 0x50, 0x61, 0x73, 0x73, 0x70, 0x6f, 0x72, 0x74, 0x12, 0x40, 0x0a, 0x05,
 	0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x12, 0x0d, 0x2e, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x1a, 0x0b, 0x2e, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x52, 0x65, 0x70, 0x6c,
 	0x79, 0x22, 0x17, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x11, 0x22, 0x0f, 0x2f, 0x70, 0x61, 0x73, 0x73,
-	0x70, 0x6f, 0x72, 0x74, 0x2f, 0x6c, 0x6f, 0x67, 0x69, 0x6e, 0x42, 0x0d, 0x5a, 0x0b, 0x2e, 0x2f,
-	0x3b, 0x70, 0x61, 0x73, 0x73, 0x70, 0x6f, 0x72, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x70, 0x6f, 0x72, 0x74, 0x2f, 0x6c, 0x6f, 0x67, 0x69, 0x6e, 0x28, 0x01, 0x30, 0x01, 0x42, 0x0d,
+	0x5a, 0x0b, 0x2e, 0x2f, 0x3b, 0x70, 0x61, 0x73, 0x73, 0x70, 0x6f, 0x72, 0x74, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -234,7 +234,7 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type PassportClient interface {
-	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginReply, error)
+	Login(ctx context.Context, opts ...grpc.CallOption) (Passport_LoginClient, error)
 }
 
 type passportClient struct {
@@ -245,59 +245,91 @@ func NewPassportClient(cc grpc.ClientConnInterface) PassportClient {
 	return &passportClient{cc}
 }
 
-func (c *passportClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginReply, error) {
-	out := new(LoginReply)
-	err := c.cc.Invoke(ctx, "/Passport/Login", in, out, opts...)
+func (c *passportClient) Login(ctx context.Context, opts ...grpc.CallOption) (Passport_LoginClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Passport_serviceDesc.Streams[0], "/Passport/Login", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &passportLoginClient{stream}
+	return x, nil
+}
+
+type Passport_LoginClient interface {
+	Send(*LoginRequest) error
+	Recv() (*LoginReply, error)
+	grpc.ClientStream
+}
+
+type passportLoginClient struct {
+	grpc.ClientStream
+}
+
+func (x *passportLoginClient) Send(m *LoginRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *passportLoginClient) Recv() (*LoginReply, error) {
+	m := new(LoginReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // PassportServer is the server API for Passport service.
 type PassportServer interface {
-	Login(context.Context, *LoginRequest) (*LoginReply, error)
+	Login(Passport_LoginServer) error
 }
 
 // UnimplementedPassportServer can be embedded to have forward compatible implementations.
 type UnimplementedPassportServer struct {
 }
 
-func (*UnimplementedPassportServer) Login(context.Context, *LoginRequest) (*LoginReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+func (*UnimplementedPassportServer) Login(Passport_LoginServer) error {
+	return status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
 
 func RegisterPassportServer(s *grpc.Server, srv PassportServer) {
 	s.RegisterService(&_Passport_serviceDesc, srv)
 }
 
-func _Passport_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LoginRequest)
-	if err := dec(in); err != nil {
+func _Passport_Login_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(PassportServer).Login(&passportLoginServer{stream})
+}
+
+type Passport_LoginServer interface {
+	Send(*LoginReply) error
+	Recv() (*LoginRequest, error)
+	grpc.ServerStream
+}
+
+type passportLoginServer struct {
+	grpc.ServerStream
+}
+
+func (x *passportLoginServer) Send(m *LoginReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *passportLoginServer) Recv() (*LoginRequest, error) {
+	m := new(LoginRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(PassportServer).Login(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Passport/Login",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PassportServer).Login(ctx, req.(*LoginRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 var _Passport_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Passport",
 	HandlerType: (*PassportServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "Login",
-			Handler:    _Passport_Login_Handler,
+			StreamName:    "Login",
+			Handler:       _Passport_Login_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/passport.proto",
 }

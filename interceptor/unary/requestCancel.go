@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
+	"log"
 	"time"
 )
 
@@ -19,6 +20,7 @@ func RequestCancel() grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 		endTime := time.Since(startTime)
 		if ctx.Err() == context.Canceled {
+			log.Println("request-cancel")
 			// 记录客户端取消请求的log
 			fmt.Println(endTime)
 		}

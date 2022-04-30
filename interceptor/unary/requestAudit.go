@@ -3,7 +3,6 @@ package unary
 import (
 	"context"
 	"google.golang.org/grpc"
-	"log"
 )
 
 /*
@@ -19,9 +18,9 @@ func RequestAudit() grpc.UnaryServerInterceptor {
 	) (interface{}, error) {
 
 		// 具体逻辑...
-		log.Println("你好")
+		//log.Println("你好")
 		resp, err := handler(ctx, req)
-		log.Println("再见")
+		//log.Println("再见")
 		return resp, err
 
 	}

@@ -6,13 +6,31 @@ import (
 	"github.com/iia-micro-service/go-grpc/core"
 	pb "github.com/iia-micro-service/go-grpc/example/passport"
 	"google.golang.org/grpc"
+	"io"
 	"log"
+	"time"
 )
 
 type PassportService struct{}
 
-func (s *PassportService) Login(ctx context.Context, r *pb.LoginRequest) (*pb.LoginReply, error) {
-	return &pb.LoginReply{Message: "hello.world"}, nil
+func (s *PassportService) Login(stream pb.Passport_LoginServer) error {
+	n := 0
+	for {
+		stream.Send(&pb.LoginReply{
+			Message: "serverMessage",
+		})
+		resp, err := stream.Recv()
+		if io.EOF == err {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		n++
+		log.Println("resp:", resp)
+		time.Sleep(time.Duration(10) * time.Second)
+	}
+	return nil
 }
 
 func main() {
