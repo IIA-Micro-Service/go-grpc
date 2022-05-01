@@ -2,18 +2,34 @@ package main
 
 import (
 	"context"
+	"expvar"
 	"github.com/iia-micro-service/go-grpc/config"
 	"github.com/iia-micro-service/go-grpc/core"
 	pb "github.com/iia-micro-service/go-grpc/example/passport"
 	"google.golang.org/grpc"
 	"io"
 	"log"
-	"time"
+	"runtime"
 )
+
+var loginMethodCounter *expvar.Int
+var GOMAXPROCSCounter *expvar.Int
+var goroutineCounter *expvar.Int
+
+func init() {
+	// 初始化expvar metric计数器
+	loginMethodCounter = expvar.NewInt("loginCounter")
+	GOMAXPROCSCounter = expvar.NewInt("GOMAXPROCS")
+	GOMAXPROCSCounter.Set(int64(runtime.NumCPU()))
+	goroutineCounter = expvar.NewInt("goroutine")
+	goroutineCounter.Set(int64(runtime.NumGoroutine()))
+}
 
 type PassportService struct{}
 
 func (s *PassportService) Login(stream pb.Passport_LoginServer) error {
+	//loginCounter := expvar.NewInt("login")
+	loginMethodCounter.Add(1)
 	n := 0
 	for {
 		stream.Send(&pb.LoginReply{
@@ -28,7 +44,7 @@ func (s *PassportService) Login(stream pb.Passport_LoginServer) error {
 		}
 		n++
 		log.Println("resp:", resp)
-		time.Sleep(time.Duration(10) * time.Second)
+		//time.Sleep(time.Duration(1) * time.Second)
 	}
 	return nil
 }
@@ -61,4 +77,5 @@ func main() {
 
 	// "主协程"阻塞挂起，保证不退出，并同时等待系统结束信号即sigint或者sigterm信号
 	svr.WaitTermination(nil)
+
 }

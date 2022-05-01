@@ -2,7 +2,6 @@ package core
 
 import (
 	"crypto/tls"
-	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/iia-micro-service/go-grpc/config"
 	"golang.org/x/net/http2"
@@ -38,13 +37,17 @@ func (hSvr *httpServer) Run() {
 func (hSvr *httpServer) serv() {
 	err := hSvr.httpServer.ListenAndServe()
 	if err != nil {
-		log.Fatalf("tRPC - Http server err: %v", err)
+		// Golang标准库http服务正在running时候，如果执行Close()方法，golang server标准库就会报这个错
+		if err == http.ErrServerClosed {
+		} else {
+			log.Printf("tRPC - Http server err: %v", err)
+		}
 	}
 }
 
 func (hSvr *httpServer) Stop() {
-	hSvr.httpServer.Close()
-	log.Printf("tRPC - Stop Http server on %s\n", hSvr.httpServer.Addr)
+	err := hSvr.httpServer.Close()
+	log.Printf("tRPC - Stop Http server on %s, err=%v\n", hSvr.httpServer.Addr, err)
 }
 
 func NewHttp(config *config.Config, grpc *grpc.Server) *httpServer {
@@ -63,10 +66,10 @@ func NewHttp(config *config.Config, grpc *grpc.Server) *httpServer {
 			Handler: h2c.NewHandler(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					if r.ProtoMajor == 2 && strings.Contains(r.Header.Get(`Content-Type`), `application/grpc`) {
-						fmt.Println("gRPC request")
+						//fmt.Println("gRPC request")
 						grpc.ServeHTTP(w, r)
 					} else {
-						fmt.Println("Http request")
+						//fmt.Println("Http request")
 						gatewayMux.ServeHTTP(w, r)
 					}
 				}),

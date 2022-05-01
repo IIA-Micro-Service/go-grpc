@@ -18,6 +18,7 @@ type Core struct {
 	config           *config.Config
 	grpcServer       *grpcServer
 	httpServer       *httpServer
+	metricServer     *MetricServer
 	grpcOptions      []grpc.ServerOption
 	reflectionStatus bool
 	shutDownHook     func()
@@ -73,6 +74,8 @@ func (core *Core) Run() error {
 	}
 	// 让http服务跑起来
 	core.httpServer.Run()
+	// 运行基于expvar标准库的轻量级metric监控服务
+	core.metricServer.Run()
 	return err
 }
 
@@ -95,6 +98,7 @@ func (core *Core) WaitTermination(stopHook func()) {
 		// 结束grpc服务
 		core.grpcServer.Stop()
 	}
+	core.metricServer.Stop()
 	log.Println("tRPC - END")
 	if stopHook != nil {
 		stopHook()
@@ -121,6 +125,9 @@ func New(config *config.Config) *Core {
 		httpSvr := NewHttp(config, grpcSvr.GetRawGrpcServer())
 		core.httpServer = httpSvr
 	}
+	// 初始化一个metric服务
+	metricServer := NewMetric()
+	core.metricServer = metricServer
 
 	// 给core结构体赋值
 	core.config = config

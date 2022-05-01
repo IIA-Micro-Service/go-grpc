@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"log"
+	"time"
 )
 
 func main() {
@@ -22,6 +23,7 @@ func main() {
 		stream.Send(&pb.LoginRequest{
 			Name: "clientName",
 		})
+		time.Sleep(time.Duration(1) * time.Second)
 		resp, err := stream.Recv()
 		if io.EOF == err {
 			break
